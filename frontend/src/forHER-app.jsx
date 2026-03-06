@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ComingSoon from "./components/forHER/ComingSoon";
 import Dashboard from "./components/forHER/Dashboard";
 import GroceryList from "./components/forHER/GroceryList";
@@ -24,7 +24,7 @@ export default function App() {
       case "doctor":
         return (
           <ComingSoon
-            icon="👩‍⚕️"
+            icon="?????"
             title="Doctor Finder"
             color={C.peach}
             subtitle="Search and book prenatal specialist appointments near you - coming soon."
@@ -33,7 +33,7 @@ export default function App() {
       case "chat":
         return (
           <ComingSoon
-            icon="💬"
+            icon="??"
             title="Support Chat"
             color={C.sky}
             subtitle="Talk to certified doulas, nurses, and other mamas 24/7 - launching soon."
@@ -42,7 +42,7 @@ export default function App() {
       case "midwife":
         return (
           <ComingSoon
-            icon="🌿"
+            icon="??"
             title="Midwife Connect"
             color={C.mint}
             subtitle="Connect with certified midwives for holistic prenatal care - coming soon."
@@ -51,7 +51,7 @@ export default function App() {
       case "calendar":
         return (
           <ComingSoon
-            icon="📅"
+            icon="??"
             title="Pregnancy Calendar"
             color={C.yellow}
             subtitle="Track appointments, milestones, and baby's growth week by week - coming soon."
