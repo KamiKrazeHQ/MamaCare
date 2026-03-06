@@ -1,16 +1,7 @@
-"""
-forHER Backend — FastAPI + Apify Integration
-============================================
-Run:
-    pip install fastapi uvicorn apify-client python-dotenv
-    uvicorn app:app --reload --port 8000
-
-Endpoints:
-    GET /api/jobs       → Scraped remote/flexible jobs from Google Jobs via Apify
-    GET /api/groceries  → Prenatal grocery essentials scraped via Apify
-    GET /api/health     → Health check
-"""
-
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 import os
 import json
 from typing import Optional
@@ -29,7 +20,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# ── CORS — allow React dev server ──────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -38,8 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── APIFY CLIENT ───────────────────────────────────────────────────────────
-APIFY_TOKEN = os.getenv("APIFY_API_TOKEN", "")   # Set in your .env file
+APIFY_TOKEN = os.getenv("APIFY_API_TOKEN", "")  
 
 def get_apify_client() -> ApifyClient:
     if not APIFY_TOKEN:
@@ -50,7 +39,7 @@ def get_apify_client() -> ApifyClient:
     return ApifyClient(APIFY_TOKEN)
 
 
-# ── JOB DATA CLEANER ───────────────────────────────────────────────────────
+# job stuff
 MOTHER_FRIENDLY_KEYWORDS = [
     "remote", "flexible", "part-time", "part time", "work from home",
     "async", "asynchronous", "family", "maternity", "parental",
@@ -70,7 +59,6 @@ def clean_job(raw: dict, index: int) -> dict:
     posted_at   = raw.get("posted_at") or raw.get("date_posted", "Recently")
     apply_link  = raw.get("apply_link") or raw.get("job_url", "#")
 
-    # Determine job type from title/description
     job_type = "Full-time"
     desc_lower = description.lower()
     if "part-time" in desc_lower or "part time" in desc_lower:
@@ -80,7 +68,6 @@ def clean_job(raw: dict, index: int) -> dict:
     elif "freelance" in desc_lower:
         job_type = "Freelance"
 
-    # Build mother-friendly tags from description & title
     tags = []
     combined = f"{title} {description} {location}".lower()
     tag_map = {
@@ -96,7 +83,6 @@ def clean_job(raw: dict, index: int) -> dict:
         if any(kw in combined for kw in keywords):
             tags.append(tag)
 
-    # Truncate description to 200 chars for the card
     short_desc = (description[:200] + "…") if len(description) > 200 else description
 
     return {
@@ -110,7 +96,7 @@ def clean_job(raw: dict, index: int) -> dict:
         "tags":        tags if tags else ["Remote"],
         "posted":      _humanise_date(posted_at),
         "apply_link":  apply_link,
-        "logo":        "💼",   # Replace with company logo URL if Apify returns one
+        "logo":        "💼",   
         "scraped_at":  datetime.utcnow().isoformat(),
     }
 
@@ -133,7 +119,6 @@ def _humanise_date(raw_date: str) -> str:
         return raw_date
 
 
-# ── GROCERY DATA CLEANER ───────────────────────────────────────────────────
 PRENATAL_BENEFIT_MAP = {
     "spinach":       "Iron & Folate",
     "kale":          "Iron & Calcium",
@@ -185,7 +170,6 @@ def clean_grocery(raw: dict, index: int) -> dict:
     image    = raw.get("image_url") or raw.get("thumbnail", "")
     rating   = raw.get("rating") or raw.get("average_rating", 0.0)
 
-    # Match prenatal benefit
     name_lower = name.lower()
     benefit = "Nutritious Choice"
     for keyword, ben in PRENATAL_BENEFIT_MAP.items():
@@ -193,13 +177,11 @@ def clean_grocery(raw: dict, index: int) -> dict:
             benefit = ben
             break
 
-    # Format price
     if isinstance(price, (int, float)):
         price = f"${price:.2f}"
     elif not str(price).startswith("$"):
         price = f"${price}"
 
-    # Map category to emoji
     emoji = "🛒"
     for cat_key, em in CATEGORY_EMOJIS.items():
         if cat_key.lower() in category.lower():
@@ -221,8 +203,6 @@ def clean_grocery(raw: dict, index: int) -> dict:
     }
 
 
-# ── ROUTES ─────────────────────────────────────────────────────────────────
-
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "message": "forHER API is running 💜", "timestamp": datetime.utcnow().isoformat()}
@@ -234,12 +214,7 @@ def get_jobs(
     max_items: int = Query(default=20, ge=1, le=100, description="Max jobs to return"),
     filter_tag: Optional[str] = Query(default=None, description="Filter by tag e.g. Remote, Part-time"),
 ):
-    """
-    Triggers Apify's Google Jobs Scraper and returns cleaned, mother-friendly job listings.
-
-    Apify actor: `apify/google-jobs-scraper`
-    Docs: https://apify.com/apify/google-jobs-scraper
-    """
+  
     client = get_apify_client()
 
     run_input = {
@@ -250,17 +225,13 @@ def get_jobs(
         "datePosted":   "week",   # Jobs posted in the last week
     }
 
-    # Run the Apify actor and wait for it to finish
     run = client.actor("apify/google-jobs-scraper").call(run_input=run_input)
     dataset_id = run["defaultDatasetId"]
 
-    # Fetch all results from the dataset
     raw_items = list(client.dataset(dataset_id).iterate_items())
 
-    # Clean & filter
     cleaned = [clean_job(item, i) for i, item in enumerate(raw_items)]
 
-    # Optional tag filter
     if filter_tag:
         cleaned = [j for j in cleaned if filter_tag in j["tags"]]
 
@@ -278,14 +249,6 @@ def get_groceries(
     category: Optional[str] = Query(default=None, description="Filter by category e.g. Produce"),
     max_items: int = Query(default=24, ge=1, le=100),
 ):
-    """
-    Triggers Apify's Instacart scraper for prenatal grocery essentials.
-
-    Apify actor: `epctex/instacart-scraper`
-    Docs: https://apify.com/epctex/instacart-scraper
-
-    The search terms focus on prenatal nutrition essentials.
-    """
     client = get_apify_client()
 
     # Prenatal essentials search terms
@@ -324,8 +287,6 @@ def get_groceries(
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
-
-# ── ENTRY POINT ────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
