@@ -179,6 +179,8 @@ export const styles = `
     color: ${C.textDark}; background: white; outline: none;
     transition: border-color 0.2s ease;
   }
+  .search-input::placeholder { color: rgba(138, 122, 154, 0.45); }
+  .search-input:focus::placeholder { color: transparent; }
   .search-input:focus { border-color: ${C.lavender}; box-shadow: 0 0 0 3px ${C.lavender}22; }
 
   .filter-chip {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ErrorBanner, LoadingSpinner, useJobs } from "../../jobFetch.jsx";
+import { useJobs } from "../../jobFetch.js";
+import { ErrorBanner, LoadingSpinner } from "../../jobFetch.jsx";
 import { JOB_FILTERS } from "./data";
 import { C } from "./theme";
 
@@ -76,7 +77,7 @@ function JobCard({ job }) {
 export default function JobBoard() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [keywordInput, setKeywordInput] = useState("remote jobs for mothers");
+  const [keywordInput, setKeywordInput] = useState("");
   const [maxItemsInput, setMaxItemsInput] = useState(10);
   const [query, setQuery] = useState({ keyword: "remote jobs for mothers", maxItems: 10 });
   const [hasRequested, setHasRequested] = useState(false);
@@ -110,7 +111,6 @@ export default function JobBoard() {
         <h1 style={{ fontFamily: "'Dancing Script', cursive", fontSize: "2rem", color: C.textDark, marginBottom: 4 }}>
           Mother-Friendly Jobs
         </h1>
-        <p style={{ color: C.textMid, fontSize: "0.88rem" }}>Scrape live remote and flexible opportunities from Apify</p>
       </div>
 
       <form onSubmit={handleScrape} className="card" style={{ marginBottom: 18, display: "grid", gap: 12 }}>

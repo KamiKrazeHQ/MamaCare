@@ -1,15 +1,16 @@
-import sys
 import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 import os
-from typing import Optional
+import sys
 from datetime import datetime
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
 from apify_client import ApifyClient
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 load_dotenv()
 
@@ -27,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 def get_apify_client() -> ApifyClient:
     token = os.getenv("APIFY_API_TOKEN", "").strip()
     if not token:
@@ -37,18 +39,42 @@ def get_apify_client() -> ApifyClient:
     return ApifyClient(token)
 
 
-# job stuff
+def _humanise_date(raw_date: str) -> str:
+    """Convert ISO date string to 'X days ago' style."""
+    if not raw_date or raw_date == "Recently":
+        return "Recently"
+    try:
+        posted = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+        delta = datetime.utcnow() - posted.replace(tzinfo=None)
+        days = delta.days
+        if days == 0:
+            return "Today"
+        if days == 1:
+            return "Yesterday"
+        return f"{days} days ago"
+    except Exception:
+        return raw_date
+
+
+# Jobs
 MOTHER_FRIENDLY_KEYWORDS = [
-    "remote", "flexible", "part-time", "part time", "work from home",
-    "async", "asynchronous", "family", "maternity", "parental",
-    "contract", "freelance", "home-based",
+    "remote",
+    "flexible",
+    "part-time",
+    "part time",
+    "work from home",
+    "async",
+    "asynchronous",
+    "family",
+    "maternity",
+    "parental",
+    "contract",
+    "freelance",
+    "home-based",
 ]
 
+
 def clean_job(raw: dict, index: int) -> dict:
-    """
-    Normalise a raw Google Jobs Apify result into a clean card-ready dict.
-    Filters to surface only mother-friendly attributes.
-    """
     title = (
         raw.get("title")
         or raw.get("job_title")
@@ -68,7 +94,7 @@ def clean_job(raw: dict, index: int) -> dict:
         or raw.get("locationsText")
         or "Remote"
     )
-    description = raw.get("description") or raw.get("job_description") or ""
+    description = str(raw.get("description") or raw.get("job_description") or "")
     salary = raw.get("salary") or raw.get("salary_range") or raw.get("salaryText") or "Competitive"
     posted_at = raw.get("posted_at") or raw.get("date_posted") or raw.get("postedAt") or "Recently"
     apply_link = (
@@ -79,7 +105,6 @@ def clean_job(raw: dict, index: int) -> dict:
         or "#"
     )
 
-    description = str(description or "")
     title = str(title or "Untitled Role")
     company = str(company or "Unknown Company")
     location = str(location or "Remote")
@@ -96,59 +121,38 @@ def clean_job(raw: dict, index: int) -> dict:
     tags = []
     combined = f"{title} {description} {location}".lower()
     tag_map = {
-        "Remote":         ["remote", "work from home", "wfh"],
+        "Remote": ["remote", "work from home", "wfh"],
         "Flexible Hours": ["flexible", "your own schedule", "set your hours"],
-        "Part-time":      ["part-time", "part time"],
-        "Async":          ["async", "asynchronous"],
-        "Family Leave":   ["maternity", "parental leave", "family leave"],
-        "Contract":       ["contract"],
-        "Freelance":      ["freelance"],
+        "Part-time": ["part-time", "part time"],
+        "Async": ["async", "asynchronous"],
+        "Family Leave": ["maternity", "parental leave", "family leave"],
+        "Contract": ["contract"],
+        "Freelance": ["freelance"],
     }
     for tag, keywords in tag_map.items():
         if any(kw in combined for kw in keywords):
             tags.append(tag)
 
-    short_desc = (description[:200] + "…") if len(description) > 200 else description
+    short_desc = (description[:200] + "...") if len(description) > 200 else description
 
     return {
-        "id":          index + 1,
-        "title":       title,
-        "company":     company,
-        "location":    location,
+        "id": index + 1,
+        "title": title,
+        "company": company,
+        "location": location,
         "description": short_desc,
-        "salary":      salary if salary else "Competitive",
-        "type":        job_type,
-        "tags":        tags if tags else ["Remote"],
-        "posted":      _humanise_date(posted_at),
-        "apply_link":  apply_link,
-        "logo":        "💼",   
-        "scraped_at":  datetime.utcnow().isoformat(),
+        "salary": salary if salary else "Competitive",
+        "type": job_type,
+        "tags": tags if tags else ["Remote"],
+        "posted": _humanise_date(str(posted_at)),
+        "apply_link": apply_link,
+        "logo": "JOB",
+        "scraped_at": datetime.utcnow().isoformat(),
     }
 
 
-def _humanise_date(raw_date: str) -> str:
-    """Convert ISO date string to 'X days ago' style."""
-    if not raw_date or raw_date == "Recently":
-        return "Recently"
-    try:
-        posted = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-        delta  = datetime.utcnow() - posted.replace(tzinfo=None)
-        days   = delta.days
-        if days == 0:
-            return "Today"
-        elif days == 1:
-            return "Yesterday"
-        else:
-            return f"{days} days ago"
-    except Exception:
-        return raw_date
-
-
 def _run_jobs_actor(client: ApifyClient, keyword: str, max_items: int) -> tuple[list[dict], str]:
-    """
-    Try multiple Google Jobs actors/input schemas to keep scraping resilient
-    across actor updates.
-    """
+    """Try multiple Google Jobs actors/input schemas to keep scraping resilient."""
     actor_attempts = [
         (
             "apify/google-jobs-scraper",
@@ -187,56 +191,103 @@ def _run_jobs_actor(client: ApifyClient, keyword: str, max_items: int) -> tuple[
     )
 
 
+# Food + groceries
 PRENATAL_BENEFIT_MAP = {
-    "spinach":       "Iron & Folate",
-    "kale":          "Iron & Calcium",
-    "blueberr":      "Antioxidants",
-    "salmon":        "Omega-3 & Protein",
-    "avocado":       "Healthy Fats & Folate",
-    "greek yogurt":  "Calcium & Protein",
-    "yogurt":        "Calcium & Probiotics",
-    "lentil":        "Iron & Fiber",
-    "egg":           "Choline & Protein",
-    "sweet potato":  "Beta-Carotene & Vitamin A",
-    "almond":        "Vitamin E & Magnesium",
-    "walnut":        "Omega-3 Fatty Acids",
-    "chia":          "Omega-3 & Fiber",
-    "ginger":        "Nausea Relief",
-    "chamomile":     "Relaxation & Sleep",
-    "prenatal":      "Complete Prenatal Nutrition",
-    "folic":         "Neural Tube Support",
-    "iron":          "Iron Supplementation",
-    "dha":           "Brain Development",
-    "quinoa":        "Complete Protein",
-    "oat":           "Fiber & Iron",
+    "spinach": "Iron & Folate",
+    "kale": "Iron & Calcium",
+    "blueberr": "Antioxidants",
+    "salmon": "Omega-3 & Protein",
+    "avocado": "Healthy Fats & Folate",
+    "greek yogurt": "Calcium & Protein",
+    "yogurt": "Calcium & Probiotics",
+    "lentil": "Iron & Fiber",
+    "egg": "Choline & Protein",
+    "sweet potato": "Beta-Carotene & Vitamin A",
+    "almond": "Vitamin E & Magnesium",
+    "walnut": "Omega-3 Fatty Acids",
+    "chia": "Omega-3 & Fiber",
+    "ginger": "Nausea Relief",
+    "chamomile": "Relaxation & Sleep",
+    "prenatal": "Complete Prenatal Nutrition",
+    "folic": "Neural Tube Support",
+    "iron": "Iron Supplementation",
+    "dha": "Brain Development",
+    "quinoa": "Complete Protein",
+    "oat": "Fiber & Iron",
 }
 
 CATEGORY_EMOJIS = {
-    "Produce":      "🥦",
-    "Dairy":        "🥛",
-    "Protein":      "🥩",
-    "Seafood":      "🐟",
-    "Pantry":       "🫙",
-    "Supplements":  "💊",
-    "Beverages":    "🍵",
-    "Snacks":       "🥜",
-    "Frozen":       "❄️",
-    "Bakery":       "🍞",
-    "Other":        "🛒",
+    "Produce": "P",
+    "Dairy": "D",
+    "Protein": "R",
+    "Seafood": "S",
+    "Pantry": "Y",
+    "Supplements": "V",
+    "Beverages": "B",
+    "Snacks": "N",
+    "Frozen": "F",
+    "Bakery": "K",
+    "Other": "G",
 }
 
+DEFAULT_GROCERY_SEARCHES = [
+    "organic spinach prenatal",
+    "prenatal vitamins dha",
+    "wild salmon fresh",
+    "organic blueberries",
+    "greek yogurt full fat",
+    "avocado organic",
+    "free range eggs",
+    "sweet potato organic",
+    "almond butter natural",
+    "chamomile tea caffeine free",
+]
+
+DEFAULT_FOOD_SEARCHES = [
+    "healthy breakfast for pregnancy",
+    "high protein snacks",
+    "prenatal meal prep",
+    "whole grain lunch options",
+    "low mercury seafood",
+    "iron rich foods",
+    "folate rich foods",
+    "calcium rich foods",
+]
+
+MEAL_TYPE_KEYWORDS = {
+    "Breakfast": ["breakfast", "oat", "cereal", "yogurt", "egg"],
+    "Lunch": ["lunch", "sandwich", "salad", "wrap", "quinoa"],
+    "Dinner": ["dinner", "salmon", "chicken", "rice", "pasta"],
+    "Snack": ["snack", "bar", "nuts", "crackers", "fruit"],
+    "Drink": ["tea", "milk", "juice", "smoothie", "water"],
+}
+
+
+def _run_instacart_actor(client: ApifyClient, search_queries: list[str], max_items: int) -> list[dict]:
+    run_input = {
+        "searchQueries": search_queries,
+        "maxResults": max_items,
+        "includeReviews": False,
+    }
+    try:
+        run = client.actor("epctex/instacart-scraper").call(run_input=run_input)
+        dataset_id = run["defaultDatasetId"]
+        return list(client.dataset(dataset_id).iterate_items())[:max_items]
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Apify Instacart scraping failed. Last error: {exc}",
+        ) from exc
+
+
 def clean_grocery(raw: dict, index: int) -> dict:
-    """
-    Normalise a raw Instacart/grocery scraper result into a clean item dict.
-    Attaches prenatal benefit labels.
-    """
-    name     = raw.get("name") or raw.get("product_name", "Unknown Item")
-    price    = raw.get("price") or raw.get("current_price", "N/A")
-    unit     = raw.get("unit_size") or raw.get("weight", "")
-    category = raw.get("category") or raw.get("department", "Other")
-    store    = raw.get("store") or raw.get("retailer", "Instacart")
-    image    = raw.get("image_url") or raw.get("thumbnail", "")
-    rating   = raw.get("rating") or raw.get("average_rating", 0.0)
+    name = str(raw.get("name") or raw.get("product_name") or "Unknown Item")
+    price = raw.get("price") or raw.get("current_price") or "N/A"
+    unit = str(raw.get("unit_size") or raw.get("weight") or "")
+    category = str(raw.get("category") or raw.get("department") or "Other")
+    store = str(raw.get("store") or raw.get("retailer") or "Instacart")
+    image = str(raw.get("image_url") or raw.get("thumbnail") or "")
+    rating = raw.get("rating") or raw.get("average_rating") or 0.0
 
     name_lower = name.lower()
     benefit = "Nutritious Choice"
@@ -246,34 +297,91 @@ def clean_grocery(raw: dict, index: int) -> dict:
             break
 
     if isinstance(price, (int, float)):
-        price = f"${price:.2f}"
-    elif not str(price).startswith("$"):
-        price = f"${price}"
+        formatted_price = f"${price:.2f}"
+    else:
+        formatted_price = str(price)
+        if formatted_price != "N/A" and not formatted_price.startswith("$"):
+            formatted_price = f"${formatted_price}"
 
-    emoji = "🛒"
+    emoji = CATEGORY_EMOJIS["Other"]
     for cat_key, em in CATEGORY_EMOJIS.items():
         if cat_key.lower() in category.lower():
             emoji = em
             break
 
     return {
-        "id":         index + 1,
-        "name":       name,
-        "category":   category,
-        "price":      price,
-        "unit":       unit,
-        "benefit":    benefit,
-        "emoji":      emoji,
-        "store":      store,
-        "rating":     round(float(rating), 1) if rating else 4.5,
-        "image":      image,
+        "id": index + 1,
+        "name": name,
+        "category": category,
+        "price": formatted_price,
+        "unit": unit,
+        "benefit": benefit,
+        "emoji": emoji,
+        "store": store,
+        "rating": round(float(rating), 1) if rating else 4.5,
+        "image": image,
+        "scraped_at": datetime.utcnow().isoformat(),
+    }
+
+
+def clean_food(raw: dict, index: int) -> dict:
+    name = str(raw.get("name") or raw.get("product_name") or "Unknown Food")
+    category = str(raw.get("category") or raw.get("department") or "Other")
+    store = str(raw.get("store") or raw.get("retailer") or "Instacart")
+    unit = str(raw.get("unit_size") or raw.get("weight") or "")
+    description = str(raw.get("description") or raw.get("brand") or "")
+    rating_raw = raw.get("rating") or raw.get("average_rating") or 0.0
+    price_raw = raw.get("price") or raw.get("current_price") or "N/A"
+
+    if isinstance(price_raw, (int, float)):
+        price = f"${price_raw:.2f}"
+    else:
+        price = str(price_raw)
+        if price and price != "N/A" and not price.startswith("$"):
+            price = f"${price}"
+
+    name_lower = name.lower()
+    meal_type = "Any"
+    for label, keywords in MEAL_TYPE_KEYWORDS.items():
+        if any(keyword in name_lower for keyword in keywords):
+            meal_type = label
+            break
+
+    benefit = "Balanced Nutrition"
+    for keyword, ben in PRENATAL_BENEFIT_MAP.items():
+        if keyword in name_lower:
+            benefit = ben
+            break
+
+    emoji = CATEGORY_EMOJIS["Other"]
+    for cat_key, em in CATEGORY_EMOJIS.items():
+        if cat_key.lower() in category.lower():
+            emoji = em
+            break
+
+    return {
+        "id": index + 1,
+        "name": name,
+        "category": category,
+        "meal_type": meal_type,
+        "price": price or "N/A",
+        "unit": unit,
+        "benefit": benefit,
+        "store": store,
+        "rating": round(float(rating_raw), 1) if rating_raw else 4.5,
+        "description": description,
+        "emoji": emoji,
         "scraped_at": datetime.utcnow().isoformat(),
     }
 
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "message": "forHER API is running 💜", "timestamp": datetime.utcnow().isoformat()}
+    return {
+        "status": "ok",
+        "message": "forHER API is running",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 @app.get("/api/jobs")
@@ -284,64 +392,61 @@ def get_jobs(
 ):
     client = get_apify_client()
     raw_items, actor_used = _run_jobs_actor(client, keyword, max_items)
-
     cleaned = [clean_job(item, i) for i, item in enumerate(raw_items)]
 
     if filter_tag:
-        cleaned = [j for j in cleaned if filter_tag in j["tags"]]
+        cleaned = [job for job in cleaned if filter_tag in job["tags"]]
 
     return {
-        "count":    len(cleaned),
-        "keyword":  keyword,
-        "jobs":     cleaned,
-        "source":   f"Apify Google Jobs Scraper ({actor_used})",
+        "count": len(cleaned),
+        "keyword": keyword,
+        "jobs": cleaned,
+        "source": f"Apify Google Jobs Scraper ({actor_used})",
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
 
 @app.get("/api/groceries")
 def get_groceries(
+    keyword: Optional[str] = Query(default=None, description="Optional search keyword"),
     category: Optional[str] = Query(default=None, description="Filter by category e.g. Produce"),
     max_items: int = Query(default=24, ge=1, le=100),
 ):
     client = get_apify_client()
-
-    # Prenatal essentials search terms
-    prenatal_searches = [
-        "organic spinach prenatal",
-        "prenatal vitamins DHA",
-        "wild salmon fresh",
-        "organic blueberries",
-        "greek yogurt full fat",
-        "avocado organic",
-        "free range eggs",
-        "sweet potato organic",
-        "almond butter natural",
-        "chamomile tea caffeine free",
-    ]
-
-    run_input = {
-        "searchQueries": prenatal_searches[:5],   # Keep cost low; expand as needed
-        "maxResults":    max_items,
-        "includeReviews": False,
-    }
-
-    run = client.actor("epctex/instacart-scraper").call(run_input=run_input)
-    dataset_id = run["defaultDatasetId"]
-
-    raw_items = list(client.dataset(dataset_id).iterate_items())
-    cleaned   = [clean_grocery(item, i) for i, item in enumerate(raw_items)]
+    searches = [keyword.strip()] if keyword and keyword.strip() else DEFAULT_GROCERY_SEARCHES[:5]
+    raw_items = _run_instacart_actor(client, searches, max_items)
+    cleaned = [clean_grocery(item, i) for i, item in enumerate(raw_items)]
 
     if category:
-        cleaned = [g for g in cleaned if category.lower() in g["category"].lower()]
+        cleaned = [item for item in cleaned if category.lower() in item["category"].lower()]
 
     return {
-        "count":      len(cleaned),
-        "groceries":  cleaned,
-        "source":     "Apify Instacart Scraper",
+        "count": len(cleaned),
+        "keyword": keyword or "",
+        "groceries": cleaned,
+        "source": "Apify Instacart Scraper",
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
+@app.get("/api/foods")
+def get_foods(
+    keyword: str = Query(default="healthy pregnancy foods", description="Food search keyword"),
+    max_items: int = Query(default=24, ge=1, le=100),
+    meal_type: Optional[str] = Query(default=None, description="Optional filter e.g. Breakfast, Snack"),
+):
+    client = get_apify_client()
+    searches = [keyword.strip()] if keyword.strip() else DEFAULT_FOOD_SEARCHES[:5]
+    raw_items = _run_instacart_actor(client, searches, max_items)
+    cleaned = [clean_food(item, i) for i, item in enumerate(raw_items)]
+
+    if meal_type:
+        cleaned = [item for item in cleaned if item["meal_type"].lower() == meal_type.lower()]
+
+    return {
+        "count": len(cleaned),
+        "keyword": keyword,
+        "foods": cleaned,
+        "source": "Apify Instacart Scraper",
+        "fetched_at": datetime.utcnow().isoformat(),
+    }
