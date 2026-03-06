@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
-from routers import calendar #accessing our built routes and methods for calender and chat
+from routers import calendar, chat #accessing our built routes and methods for calender and chat
 #loading environement variables
 load_dotenv()
 
@@ -52,5 +52,5 @@ def root():
 #FastAPI rejects it with a clear error, No need for manual validation
 
 app.include_router(calendar.router)  #including calender router to app
-#app.include_router(chat.router)  #including chat router to app
+app.include_router(chat.router)  #including chat router to app
 
