@@ -22,7 +22,16 @@ export const C = {
 // GLOBAL STYLES
 export const styles = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Lato', sans-serif; background: ${C.white}; color: ${C.textDark}; }
+  body {
+    font-family: 'Lato', sans-serif;
+    color: ${C.textDark};
+    background-color: ${C.white};
+    background-image:
+      radial-gradient(1200px 600px at 8% -10%, ${C.lavender}22 0%, transparent 58%),
+      radial-gradient(900px 520px at 92% 0%, ${C.peach}1f 0%, transparent 60%),
+      linear-gradient(180deg, #fffdf8 0%, #fffaf4 55%, #fffdf8 100%);
+    background-attachment: fixed;
+  }
 
   @keyframes floatIn {
     from { opacity: 0; transform: translateY(22px); }
@@ -65,10 +74,11 @@ export const styles = `
 
   .logo-text {
     font-family: 'Dancing Script', cursive;
-    font-size: 2rem; font-weight: 700;
+    font-size: 2.2rem; font-weight: 700;
     background: linear-gradient(135deg, ${C.lavender}, #b89fe8, ${C.peach});
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
+    text-shadow: 0.3px 0.3px 0 rgba(90, 74, 106, 0.22);
   }
 
   .card {

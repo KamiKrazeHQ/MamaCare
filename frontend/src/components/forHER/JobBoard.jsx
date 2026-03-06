@@ -40,7 +40,7 @@ export default function JobBoard() {
     <div style={{ maxWidth:1200, margin:"0 auto", padding:"32px 24px" }}>
       <div className="ai" style={{ marginBottom:24 }}>
         <h1 style={{ fontFamily:"'Dancing Script', cursive", fontSize:"2rem", color:C.textDark, marginBottom:4 }}>💼 Mother-Friendly Jobs</h1>
-        <p style={{ color:C.textMid, fontSize:"0.88rem" }}>Curated remote & flexible opportunities — sourced via Apify's Google Jobs Scraper</p>
+        <p style={{ color:C.textMid, fontSize:"0.88rem" }}>Curated remote & flexible opportunities</p>
       </div>
       <div style={{ position:"relative", marginBottom:14 }}>
         <span style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", fontSize:"1rem" }}>🔍</span>
