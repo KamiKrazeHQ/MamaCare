@@ -61,7 +61,12 @@ async def websocket_chat(websocket: WebSocket, room_id: str, user_name: str):
     try:
         while True:
             raw = await websocket.receive_text()
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_text(json.dumps({"type": "error", "content": "Message must be JSON format"}))
+                continue  # don't crash, just skip and wait for next message
+
 
             message = {
                 "type": "message",
