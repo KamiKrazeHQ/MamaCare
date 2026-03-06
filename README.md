@@ -14,3 +14,13 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+Regular HTTP (what calendar uses):
+  Frontend: "Hey, give me appointments"  →  Backend responds  →  Connection closes
+  Frontend must ask again every time it wants new data.
+
+WebSocket (what chat uses):
+  Frontend connects  →  Connection stays OPEN permanently
+  Backend can push messages to frontend anytime, instantly.
+  Perfect for chat — you don't want to refresh to see new messages.
