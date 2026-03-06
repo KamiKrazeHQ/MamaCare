@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
-
+from routers import calendar #accessing our built routes and methods for calender and chat
 #loading environement variables
 load_dotenv()
 
@@ -39,4 +39,18 @@ def root():
 # run uvicorn main:app --reload --port 8000
 # open http://localhost:8000/docs#/ on your browser
 # make sure backend file saves first
+
+
+#HTTP Methods — when to use what
+# GET | Fetching data | Get all appointments 
+# POST | Creating new data | Book new appointment 
+# PUT | Updating existing data | Reschedule appointment 
+# DELETE | Removing data | Cancel appointment
+
+#FastAPI uses Pydantic to validate incoming data automaticsally
+#If a required field is missing or the wrong type
+#FastAPI rejects it with a clear error, No need for manual validation
+
+app.include_router(calendar.router)  #including calender router to app
+#app.include_router(chat.router)  #including chat router to app
 
