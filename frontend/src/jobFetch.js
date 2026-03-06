@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -6,16 +6,17 @@ function useApiFetch(endpoint, params = {}, enabled = true) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
+  const paramsKey = useMemo(() => JSON.stringify(params), [params]);
 
   const buildUrl = useCallback(() => {
     const url = new URL(`${API_BASE}${endpoint}`);
-    Object.entries(params).forEach(([k, v]) => {
+    Object.entries(JSON.parse(paramsKey)).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") {
         url.searchParams.set(k, v);
       }
     });
     return url.toString();
-  }, [endpoint, JSON.stringify(params)]);
+  }, [endpoint, paramsKey]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
