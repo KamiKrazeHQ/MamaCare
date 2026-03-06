@@ -1,0 +1,18 @@
+Project: forHer
+
+This repo contains:
+- backend: FastAPI service (entrypoint is backend/app.py)
+- frontend: React + Vite app
+
+Current workflow:
+- Backend dev server: `cd backend && uvicorn app:app --reload --port 8000`
+- Frontend dev server: `cd frontend && npm run dev`
+
+Guardrails:
+- In `backend/`, only modify `app.py` unless the user explicitly asks to override this rule.
+- Avoid destructive git commands.
+- Keep changes minimal and targeted.
+
+Development notes:
+- Backend uses environment variables from `backend/.env` (for example `APIFY_API_TOKEN`).
+- Prefer concise diffs and verify with local commands when possible.
