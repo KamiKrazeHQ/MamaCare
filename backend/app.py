@@ -3,7 +3,6 @@ import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 import os
-import json
 from typing import Optional
 from datetime import datetime
 
@@ -28,15 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-APIFY_TOKEN = os.getenv("APIFY_API_TOKEN", "")  
-
 def get_apify_client() -> ApifyClient:
-    if not APIFY_TOKEN:
+    token = os.getenv("APIFY_API_TOKEN", "").strip()
+    if not token:
         raise HTTPException(
             status_code=503,
             detail="APIFY_API_TOKEN not set. Add it to your .env file.",
         )
-    return ApifyClient(APIFY_TOKEN)
+    return ApifyClient(token)
 
 
 # job stuff
@@ -51,13 +49,40 @@ def clean_job(raw: dict, index: int) -> dict:
     Normalise a raw Google Jobs Apify result into a clean card-ready dict.
     Filters to surface only mother-friendly attributes.
     """
-    title       = raw.get("title") or raw.get("job_title", "Untitled Role")
-    company     = raw.get("company_name") or raw.get("employer", "Unknown Company")
-    location    = raw.get("location") or raw.get("job_location", "Remote")
-    description = raw.get("description") or raw.get("job_description", "")
-    salary      = raw.get("salary") or raw.get("salary_range", "Competitive")
-    posted_at   = raw.get("posted_at") or raw.get("date_posted", "Recently")
-    apply_link  = raw.get("apply_link") or raw.get("job_url", "#")
+    title = (
+        raw.get("title")
+        or raw.get("job_title")
+        or raw.get("positionName")
+        or raw.get("position")
+        or "Untitled Role"
+    )
+    company = (
+        raw.get("company_name")
+        or raw.get("companyName")
+        or raw.get("employer")
+        or "Unknown Company"
+    )
+    location = (
+        raw.get("location")
+        or raw.get("job_location")
+        or raw.get("locationsText")
+        or "Remote"
+    )
+    description = raw.get("description") or raw.get("job_description") or ""
+    salary = raw.get("salary") or raw.get("salary_range") or raw.get("salaryText") or "Competitive"
+    posted_at = raw.get("posted_at") or raw.get("date_posted") or raw.get("postedAt") or "Recently"
+    apply_link = (
+        raw.get("apply_link")
+        or raw.get("job_url")
+        or raw.get("jobUrl")
+        or raw.get("url")
+        or "#"
+    )
+
+    description = str(description or "")
+    title = str(title or "Untitled Role")
+    company = str(company or "Unknown Company")
+    location = str(location or "Remote")
 
     job_type = "Full-time"
     desc_lower = description.lower()
@@ -117,6 +142,49 @@ def _humanise_date(raw_date: str) -> str:
             return f"{days} days ago"
     except Exception:
         return raw_date
+
+
+def _run_jobs_actor(client: ApifyClient, keyword: str, max_items: int) -> tuple[list[dict], str]:
+    """
+    Try multiple Google Jobs actors/input schemas to keep scraping resilient
+    across actor updates.
+    """
+    actor_attempts = [
+        (
+            "apify/google-jobs-scraper",
+            {
+                "queries": [keyword],
+                "maxJobsPerQuery": max_items,
+                "countryCode": "US",
+                "languageCode": "en",
+                "datePosted": "week",
+            },
+        ),
+        (
+            "orgupdate/google-jobs-scraper",
+            {
+                "includeKeyword": keyword,
+                "countryName": "usa",
+                "datePosted": "week",
+                "pagesToFetch": max(1, min(10, (max_items + 9) // 10)),
+            },
+        ),
+    ]
+
+    last_error = None
+    for actor_id, run_input in actor_attempts:
+        try:
+            run = client.actor(actor_id).call(run_input=run_input)
+            dataset_id = run["defaultDatasetId"]
+            raw_items = list(client.dataset(dataset_id).iterate_items())[:max_items]
+            return raw_items, actor_id
+        except Exception as exc:
+            last_error = exc
+
+    raise HTTPException(
+        status_code=502,
+        detail=f"Apify job scraping failed for all actor attempts. Last error: {last_error}",
+    )
 
 
 PRENATAL_BENEFIT_MAP = {
@@ -214,21 +282,8 @@ def get_jobs(
     max_items: int = Query(default=20, ge=1, le=100, description="Max jobs to return"),
     filter_tag: Optional[str] = Query(default=None, description="Filter by tag e.g. Remote, Part-time"),
 ):
-  
     client = get_apify_client()
-
-    run_input = {
-        "queries":      [keyword],
-        "maxJobsPerQuery": max_items,
-        "countryCode":  "US",
-        "languageCode": "en",
-        "datePosted":   "week",   # Jobs posted in the last week
-    }
-
-    run = client.actor("apify/google-jobs-scraper").call(run_input=run_input)
-    dataset_id = run["defaultDatasetId"]
-
-    raw_items = list(client.dataset(dataset_id).iterate_items())
+    raw_items, actor_used = _run_jobs_actor(client, keyword, max_items)
 
     cleaned = [clean_job(item, i) for i, item in enumerate(raw_items)]
 
@@ -239,7 +294,7 @@ def get_jobs(
         "count":    len(cleaned),
         "keyword":  keyword,
         "jobs":     cleaned,
-        "source":   "Apify Google Jobs Scraper",
+        "source":   f"Apify Google Jobs Scraper ({actor_used})",
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
