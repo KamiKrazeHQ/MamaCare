@@ -624,8 +624,7 @@ function JobCard({ job }) {
 function JobBoard() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [jobs, setJobs] = useState(MOCK_JOBS);
-  const [loading, setLoading] = useState(false);
+  const jobs = MOCK_JOBS;
 
   const filtered = jobs.filter(j => {
     const matchSearch = j.title.toLowerCase().includes(search.toLowerCase()) ||
