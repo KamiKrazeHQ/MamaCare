@@ -59,7 +59,7 @@ function Intake({ triage, onSetValue, onStart }) {
         onClick={onStart}
         style={{ marginTop: 14, opacity: complete ? 1 : 0.6 }}
       >
-        Start AI Doctor Chat
+        Start AI Advisor Chat
       </button>
     </div>
   );
@@ -138,7 +138,7 @@ export default function DoctorAssistant() {
         },
       ]);
     } catch (err) {
-      setError(err.message || "Could not reach AI doctor endpoint.");
+      setError(err.message || "Could not reach AI advisor endpoint.");
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ export default function DoctorAssistant() {
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
       <div className="ai" style={{ marginBottom: 18 }}>
-        <h1 style={{ fontFamily: "'Dancing Script', cursive", fontSize: "2rem", color: C.textDark }}>AI Doctor (Education Only)</h1>
+        <h1 style={{ fontFamily: "'Dancing Script', cursive", fontSize: "2rem", color: C.textDark }}>AI Advisor</h1>
       </div>
 
       <div
