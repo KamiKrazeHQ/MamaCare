@@ -5,7 +5,7 @@ export default function Header({ activeTab, setActiveTab, savedJobsCount = 0, ca
     { id: "dashboard", label: "Home" },
     { id: "jobs", label: "Jobs" },
     { id: "groceries", label: "Groceries" },
-    { id: "doctor", label: "Doctor" },
+    { id: "doctor", label: "AI Advisor" },
     { id: "chat", label: "MOMgram" },
     { id: "midwife", label: "Midwife" },
     { id: "calendar", label: "Calendar" },

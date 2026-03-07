@@ -115,7 +115,7 @@ function BabyDevFactCard() {
 // ════════════════════════════════════════════════════════════════════════════
 //  NEW WIDGET 3 — APPOINTMENT COUNTDOWN
 // ════════════════════════════════════════════════════════════════════════════
-function AppointmentCountdownCard() {
+function AppointmentCountdownCard({ onAddAppointment }) {
   const next = APPOINTMENTS[0];
   const days = daysUntil(next.date);
 
@@ -181,7 +181,11 @@ function AppointmentCountdownCard() {
         ))}
       </div>
 
-      <button className="btn-primary" style={{ width:"100%", marginTop:14, textAlign:"center" }}>
+      <button
+        className="btn-primary"
+        style={{ width:"100%", marginTop:14, textAlign:"center" }}
+        onClick={onAddAppointment}
+      >
         + Add Appointment
       </button>
     </div>
@@ -375,7 +379,7 @@ function QuickLinksCard({ setActiveTab }) {
   const links = [
     { label:"Browse Jobs",   icon:"💼", tab:"jobs",      color:C.lavender },
     { label:"Shop Healthy",  icon:"🛒", tab:"groceries", color:C.mint },
-    { label:"Book Doctor",   icon:"👩‍⚕️", tab:"doctor",    color:C.peach },
+    { label:"Ask AI Advisor",   icon:"AI", tab:"doctor",    color:C.peach },
     { label:"Chat Support",  icon:"💬", tab:"chat",      color:C.sky },
   ];
   return (
@@ -398,9 +402,14 @@ function QuickLinksCard({ setActiveTab }) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (updated layout)
 // ═══════════════════════════════════════════════════════════════════════════
-export default function Dashboard({ setActiveTab }) {
+export default function Dashboard({ setActiveTab, onRequestAddAppointment }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const handleAddAppointment = () => {
+    if (onRequestAddAppointment) onRequestAddAppointment();
+    setActiveTab("calendar");
+  };
 
   return (
     <div style={{ maxWidth:1240, margin:"0 auto", padding:"32px 24px" }}>
@@ -424,7 +433,7 @@ export default function Dashboard({ setActiveTab }) {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:18 }}>
         <AffirmationCard />
         <BabyDevFactCard />
-        <AppointmentCountdownCard />
+        <AppointmentCountdownCard onAddAppointment={handleAddAppointment} />
       </div>
 
       {/* ── ROW 3: Hospital Bag (span 2) + Tip ── */}
@@ -440,6 +449,7 @@ export default function Dashboard({ setActiveTab }) {
     </div>
   );
 }
+
 
 
 

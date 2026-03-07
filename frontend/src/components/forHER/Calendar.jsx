@@ -23,7 +23,7 @@ function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
-export default function Calendar() {
+export default function Calendar({ addPromptToken = 0 }) {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -56,6 +56,21 @@ export default function Calendar() {
   useEffect(() => {
     loadAppointments();
   }, []);
+
+  useEffect(() => {
+    if (!addPromptToken) return;
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIndex = now.getMonth();
+    const month = String(monthIndex + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    setCurrentYear(year);
+    setCurrentMonth(monthIndex);
+    setSelectedDate(`${year}-${month}-${day}`);
+    setSelectedAppt(null);
+    setShowForm(true);
+  }, [addPromptToken]);
 
   // Get appointments for a specific date string
   const getApptsForDate = (dateStr) =>
