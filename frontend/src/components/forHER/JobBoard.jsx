@@ -153,7 +153,6 @@ export default function JobBoard() {
       )}
 
       <div style={{ position: "relative", marginBottom: 14 }}>
-        <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: "1rem" }}>??</span>
         <input
           className="search-input"
           placeholder="Filter fetched jobs..."

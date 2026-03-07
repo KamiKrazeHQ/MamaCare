@@ -137,7 +137,6 @@ export default function GroceryList() {
       )}
 
       <div style={{ position: "relative", marginBottom: 14 }}>
-        <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: "1rem" }}>S</span>
         <input
           className="search-input"
           placeholder="Filter fetched groceries..."
