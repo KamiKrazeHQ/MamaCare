@@ -1,10 +1,12 @@
 import io
+import json
 import os
 import sys
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from datetime import datetime
 from typing import Optional
 
-from apify_client import ApifyClient
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,14 +31,70 @@ app.add_middleware(
 )
 
 
-def get_apify_client() -> ApifyClient:
-    token = os.getenv("APIFY_API_TOKEN", "").strip()
+def get_olostep_api_key() -> str:
+    token = (
+        os.getenv("OLOSTEP_API_KEY", "").strip()
+        or os.getenv("OLASTEP_API_KEY", "").strip()
+    )
     if not token:
         raise HTTPException(
             status_code=503,
-            detail="APIFY_API_TOKEN not set. Add it to your .env file.",
+            detail="OLOSTEP_API_KEY not set. Add it to your .env file.",
         )
-    return ApifyClient(token)
+    return token
+
+
+def _olostep_post(path: str, payload: dict, api_key: str) -> dict:
+    base_url = os.getenv("OLOSTEP_BASE_URL", "https://api.olostep.com/v1").rstrip("/")
+    url = f"{base_url}/{path.lstrip('/')}"
+    body = json.dumps(payload).encode("utf-8")
+    request = Request(
+        url=url,
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=90) as response:
+            response_body = response.read().decode("utf-8")
+            return json.loads(response_body) if response_body else {}
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Olostep request failed ({exc.code}): {detail}",
+        ) from exc
+    except URLError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Olostep request failed: {exc}",
+        ) from exc
+
+
+def _extract_olostep_json_content(result: dict, key: str) -> list[dict]:
+    payload = result
+    if isinstance(result.get("result"), dict):
+        payload = result["result"]
+
+    content = payload.get("json_content") or payload.get("json")
+    parsed = None
+    if isinstance(content, str):
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            parsed = None
+    elif isinstance(content, dict):
+        parsed = content
+
+    if isinstance(parsed, dict) and isinstance(parsed.get(key), list):
+        return [item for item in parsed[key] if isinstance(item, dict)]
+    if isinstance(payload.get(key), list):
+        return [item for item in payload[key] if isinstance(item, dict)]
+    return []
 
 
 def _humanise_date(raw_date: str) -> str:
@@ -151,44 +209,34 @@ def clean_job(raw: dict, index: int) -> dict:
     }
 
 
-def _run_jobs_actor(client: ApifyClient, keyword: str, max_items: int) -> tuple[list[dict], str]:
-    """Try multiple Google Jobs actors/input schemas to keep scraping resilient."""
-    actor_attempts = [
-        (
-            "apify/google-jobs-scraper",
+def _run_jobs_olostep(api_key: str, keyword: str, max_items: int) -> tuple[list[dict], str]:
+    schema = {
+        "jobs": [
             {
-                "queries": [keyword],
-                "maxJobsPerQuery": max_items,
-                "countryCode": "US",
-                "languageCode": "en",
-                "datePosted": "week",
-            },
+                "title": "string",
+                "company_name": "string",
+                "location": "string",
+                "description": "string",
+                "salary": "string",
+                "posted_at": "string",
+                "apply_link": "string",
+                "job_type": "string",
+            }
+        ]
+    }
+    payload = {
+        "model": "search-1",
+        "task": (
+            "Find recent United States job listings for this query: "
+            f"'{keyword}'. Return up to {max_items} jobs with title, company_name, "
+            "location, description, salary, posted_at, apply_link, and job_type."
         ),
-        (
-            "orgupdate/google-jobs-scraper",
-            {
-                "includeKeyword": keyword,
-                "countryName": "usa",
-                "datePosted": "week",
-                "pagesToFetch": max(1, min(10, (max_items + 9) // 10)),
-            },
-        ),
-    ]
-
-    last_error = None
-    for actor_id, run_input in actor_attempts:
-        try:
-            run = client.actor(actor_id).call(run_input=run_input)
-            dataset_id = run["defaultDatasetId"]
-            raw_items = list(client.dataset(dataset_id).iterate_items())[:max_items]
-            return raw_items, actor_id
-        except Exception as exc:
-            last_error = exc
-
-    raise HTTPException(
-        status_code=502,
-        detail=f"Apify job scraping failed for all actor attempts. Last error: {last_error}",
-    )
+        "json_format": schema,
+        "json": schema,
+    }
+    result = _olostep_post("answers", payload, api_key)
+    jobs = _extract_olostep_json_content(result, "jobs")[:max_items]
+    return jobs, "Olostep answers/search-1"
 
 
 # Food + groceries
@@ -263,21 +311,35 @@ MEAL_TYPE_KEYWORDS = {
 }
 
 
-def _run_instacart_actor(client: ApifyClient, search_queries: list[str], max_items: int) -> list[dict]:
-    run_input = {
-        "searchQueries": search_queries,
-        "maxResults": max_items,
-        "includeReviews": False,
+def _run_grocery_olostep(api_key: str, search_queries: list[str], max_items: int, near_location: str = "Chicago, IL") -> list[dict]:
+    query_text = ", ".join(search_queries)
+    schema = {
+        "groceries": [
+            {
+                "name": "string",
+                "price": "string",
+                "unit_size": "string",
+                "category": "string",
+                "store": "string",
+                "image_url": "string",
+                "rating": "number",
+                "description": "string",
+                "brand": "string",
+            }
+        ]
     }
-    try:
-        run = client.actor("epctex/instacart-scraper").call(run_input=run_input)
-        dataset_id = run["defaultDatasetId"]
-        return list(client.dataset(dataset_id).iterate_items())[:max_items]
-    except Exception as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Apify Instacart scraping failed. Last error: {exc}",
-        ) from exc
+    payload = {
+        "model": "search-1",
+        "task": (
+            "Find grocery products sold in the United States that match these searches: "
+            f"{query_text}. Prioritize stores and listings near {near_location}. Return up to {max_items} products with name, price, unit_size, "
+            "category, store, image_url, rating, description, and brand."
+        ),
+        "json_format": schema,
+        "json": schema,
+    }
+    result = _olostep_post("answers", payload, api_key)
+    return _extract_olostep_json_content(result, "groceries")[:max_items]
 
 
 def clean_grocery(raw: dict, index: int) -> dict:
@@ -309,6 +371,11 @@ def clean_grocery(raw: dict, index: int) -> dict:
             emoji = em
             break
 
+    try:
+        parsed_rating = round(float(rating), 1) if rating else 4.5
+    except (TypeError, ValueError):
+        parsed_rating = 4.5
+
     return {
         "id": index + 1,
         "name": name,
@@ -318,7 +385,7 @@ def clean_grocery(raw: dict, index: int) -> dict:
         "benefit": benefit,
         "emoji": emoji,
         "store": store,
-        "rating": round(float(rating), 1) if rating else 4.5,
+        "rating": parsed_rating,
         "image": image,
         "scraped_at": datetime.utcnow().isoformat(),
     }
@@ -368,7 +435,7 @@ def clean_food(raw: dict, index: int) -> dict:
         "unit": unit,
         "benefit": benefit,
         "store": store,
-        "rating": round(float(rating_raw), 1) if rating_raw else 4.5,
+        "rating": parsed_rating,
         "description": description,
         "emoji": emoji,
         "scraped_at": datetime.utcnow().isoformat(),
@@ -390,8 +457,8 @@ def get_jobs(
     max_items: int = Query(default=20, ge=1, le=100, description="Max jobs to return"),
     filter_tag: Optional[str] = Query(default=None, description="Filter by tag e.g. Remote, Part-time"),
 ):
-    client = get_apify_client()
-    raw_items, actor_used = _run_jobs_actor(client, keyword, max_items)
+    api_key = get_olostep_api_key()
+    raw_items, actor_used = _run_jobs_olostep(api_key, keyword, max_items)
     cleaned = [clean_job(item, i) for i, item in enumerate(raw_items)]
 
     if filter_tag:
@@ -401,7 +468,7 @@ def get_jobs(
         "count": len(cleaned),
         "keyword": keyword,
         "jobs": cleaned,
-        "source": f"Apify Google Jobs Scraper ({actor_used})",
+        "source": actor_used,
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
@@ -412,9 +479,10 @@ def get_groceries(
     category: Optional[str] = Query(default=None, description="Filter by category e.g. Produce"),
     max_items: int = Query(default=24, ge=1, le=100),
 ):
-    client = get_apify_client()
+    api_key = get_olostep_api_key()
+    near_location = os.getenv("GROCERY_NEAR_LOCATION", "Chicago, IL").strip() or "Chicago, IL"
     searches = [keyword.strip()] if keyword and keyword.strip() else DEFAULT_GROCERY_SEARCHES[:5]
-    raw_items = _run_instacart_actor(client, searches, max_items)
+    raw_items = _run_grocery_olostep(api_key, searches, max_items, near_location=near_location)
     cleaned = [clean_grocery(item, i) for i, item in enumerate(raw_items)]
 
     if category:
@@ -424,7 +492,7 @@ def get_groceries(
         "count": len(cleaned),
         "keyword": keyword or "",
         "groceries": cleaned,
-        "source": "Apify Instacart Scraper",
+        "source": "Olostep answers/search-1",
         "fetched_at": datetime.utcnow().isoformat(),
     }
 
@@ -435,9 +503,10 @@ def get_foods(
     max_items: int = Query(default=24, ge=1, le=100),
     meal_type: Optional[str] = Query(default=None, description="Optional filter e.g. Breakfast, Snack"),
 ):
-    client = get_apify_client()
+    api_key = get_olostep_api_key()
+    near_location = os.getenv("GROCERY_NEAR_LOCATION", "Chicago, IL").strip() or "Chicago, IL"
     searches = [keyword.strip()] if keyword.strip() else DEFAULT_FOOD_SEARCHES[:5]
-    raw_items = _run_instacart_actor(client, searches, max_items)
+    raw_items = _run_grocery_olostep(api_key, searches, max_items, near_location=near_location)
     cleaned = [clean_food(item, i) for i, item in enumerate(raw_items)]
 
     if meal_type:
@@ -447,6 +516,10 @@ def get_foods(
         "count": len(cleaned),
         "keyword": keyword,
         "foods": cleaned,
-        "source": "Apify Instacart Scraper",
+        "source": "Olostep answers/search-1",
         "fetched_at": datetime.utcnow().isoformat(),
     }
+    try:
+        parsed_rating = round(float(rating_raw), 1) if rating_raw else 4.5
+    except (TypeError, ValueError):
+        parsed_rating = 4.5

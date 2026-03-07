@@ -4,9 +4,7 @@ import { ErrorBanner, LoadingSpinner } from "../../jobFetch.jsx";
 import { JOB_FILTERS } from "./data";
 import { C } from "./theme";
 
-function JobCard({ job }) {
-  const [saved, setSaved] = useState(false);
-
+function JobCard({ job, saved, onToggleSave }) {
   return (
     <div className="card job-card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -32,10 +30,12 @@ function JobCard({ job }) {
           </div>
         </div>
         <button
-          onClick={() => setSaved(!saved)}
+          onClick={() => onToggleSave(job)}
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem", flexShrink: 0 }}
+          aria-label={saved ? "Remove from saved jobs" : "Save job"}
+          title={saved ? "Remove from saved jobs" : "Save job"}
         >
-          {saved ? "?" : "??"}
+          {saved ? "\u2665" : "\u2661"}
         </button>
       </div>
 
@@ -74,7 +74,7 @@ function JobCard({ job }) {
   );
 }
 
-export default function JobBoard() {
+export default function JobBoard({ onToggleSaveJob = () => {}, isJobSaved = () => false }) {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [keywordInput, setKeywordInput] = useState("");
@@ -133,7 +133,7 @@ export default function JobBoard() {
             style={{ width: 90, padding: "8px 10px", borderRadius: 12, border: `2px solid ${C.lavender}66`, outline: "none" }}
           />
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Scraping..." : "Scrape Jobs"}
+            {loading ? "Finding jobs..." : "Find Jobs"}
           </button>
           {hasRequested && (
             <button className="btn-ghost" type="button" onClick={refetch} disabled={loading}>
@@ -144,7 +144,7 @@ export default function JobBoard() {
       </form>
 
       {error && <ErrorBanner message={error} onRetry={refetch} />}
-      {loading && <LoadingSpinner message="Scraping jobs from Apify..." />}
+      {loading && <LoadingSpinner message="Finding jobs..." />}
 
       {hasRequested && !loading && !error && (
         <p style={{ color: C.textMid, fontSize: "0.82rem", marginBottom: 10 }}>
@@ -189,7 +189,7 @@ export default function JobBoard() {
         )}
 
         {filteredJobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} saved={isJobSaved(job)} onToggleSave={onToggleSaveJob} />
         ))}
       </div>
     </div>
