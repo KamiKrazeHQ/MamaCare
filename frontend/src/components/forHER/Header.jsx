@@ -6,7 +6,7 @@ export default function Header({ activeTab, setActiveTab }) {
     { id: "jobs", label: "Jobs" },
     { id: "groceries", label: "Groceries" },
     { id: "doctor", label: "Doctor" },
-    { id: "chat", label: "Chat" },
+    { id: "chat", label: "Mom Chat" },
     { id: "midwife", label: "Midwife" },
     { id: "calendar", label: "Calendar" },
   ];
@@ -49,7 +49,7 @@ export default function Header({ activeTab, setActiveTab }) {
           >
             💜
           </div>
-          <span className="logo-text">forHER</span>
+          <span className="logo-text">MAMAcare</span>
         </div>
 
         <nav style={{ display: "flex", gap: 3 }}>
