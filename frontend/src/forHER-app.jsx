@@ -5,6 +5,8 @@ import GroceryList from "./components/forHER/GroceryList";
 import Header from "./components/forHER/Header";
 import JobBoard from "./components/forHER/JobBoard";
 import ProfileHub from "./components/forHER/ProfileHub";
+import Calendar from "./components/forHER/Calendar";
+import ChatRoom from "./components/forHER/ChatRoom";
 import { C, ensureForHerFonts, styles } from "./components/forHER/theme";
 
 export default function App() {
@@ -64,14 +66,7 @@ export default function App() {
           />
         );
       case "chat":
-        return (
-          <ComingSoon
-            icon="📸"
-            title="MOMgram"
-            color={C.sky}
-            subtitle="Instagram-style community feed for moms - launching soon."
-          />
-        );
+        return <ChatRoom />;
       case "profile":
         return (
           <ProfileHub
@@ -92,19 +87,11 @@ export default function App() {
           />
         );
       case "calendar":
-        return (
-          <ComingSoon
-            icon="📅"
-            title="Pregnancy Calendar"
-            color={C.yellow}
-            subtitle="Track appointments, milestones, and baby's growth week by week - coming soon."
-          />
-        );
+        return <Calendar />;
       default:
         return <Dashboard setActiveTab={setActiveTab} />;
     }
   };
-
   return (
     <>
       <style>{styles}</style>
