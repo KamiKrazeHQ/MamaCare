@@ -7,12 +7,14 @@ import JobBoard from "./components/forHER/JobBoard";
 import ProfileHub from "./components/forHER/ProfileHub";
 import Calendar from "./components/forHER/Calendar";
 import ChatRoom from "./components/forHER/ChatRoom";
+import DoctorAssistant from "./components/forHER/DoctorAssistant";
 import { C, ensureForHerFonts, styles } from "./components/forHER/theme";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [savedJobs, setSavedJobs] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [calendarAddPromptToken, setCalendarAddPromptToken] = useState(0);
 
   const profile = {
     name: "Ida Wells",
@@ -51,20 +53,18 @@ export default function App() {
   const render = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard setActiveTab={setActiveTab} />;
+        return (
+          <Dashboard
+            setActiveTab={setActiveTab}
+            onRequestAddAppointment={() => setCalendarAddPromptToken((value) => value + 1)}
+          />
+        );
       case "jobs":
         return <JobBoard onToggleSaveJob={toggleSavedJob} isJobSaved={isJobSaved} />;
       case "groceries":
         return <GroceryList onToggleCartItem={toggleCartItem} isInCart={isInCart} />;
       case "doctor":
-        return (
-          <ComingSoon
-            icon="👩‍⚕️"
-            title="Doctor Finder"
-            color={C.peach}
-            subtitle="Search and book prenatal specialist appointments near you - coming soon."
-          />
-        );
+        return <DoctorAssistant />;
       case "chat":
         return <ChatRoom />;
       case "profile":
@@ -80,18 +80,19 @@ export default function App() {
       case "midwife":
         return (
           <ComingSoon
-            icon="🤱"
+            icon="MW"
             title="Midwife Connect"
             color={C.mint}
             subtitle="Connect with certified midwives for holistic prenatal care - coming soon."
           />
         );
       case "calendar":
-        return <Calendar />;
+        return <Calendar addPromptToken={calendarAddPromptToken} />;
       default:
         return <Dashboard setActiveTab={setActiveTab} />;
     }
   };
+
   return (
     <>
       <style>{styles}</style>

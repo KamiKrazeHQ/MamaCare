@@ -5,14 +5,15 @@ This repo contains:
 - frontend: React + Vite app
 
 Current workflow:
-- Backend dev server: `cd backend && uvicorn app:app --reload --port 8000`
+- Backend dev server: `cd backend && uvicorn main:app --reload --port 8000`
 - Frontend dev server: `cd frontend && npm run dev`
 
 Guardrails:
-- In `backend/`, only modify `app.py` unless the user explicitly asks to override this rule.
+- Goose may modify any files in this repository when needed to complete the user's request.
+- Do not remove, break, or regress existing features unless the user explicitly requests that change.
 - Avoid destructive git commands.
 - Keep changes minimal and targeted.
 
 Development notes:
-- Backend uses environment variables from `backend/.env` (for example `APIFY_API_TOKEN`).
+- Backend uses environment variables from .env for all the keys
 - Prefer concise diffs and verify with local commands when possible.

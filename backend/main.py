@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 import io, sys
-from routers import calendar, chat, jobs, groceries #accessing our built routes and methods for calender and chat
+from routers import calendar, chat, jobs, groceries, doctor #accessing our built routes and methods for calender and chat
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
@@ -60,5 +60,6 @@ app.include_router(calendar.router)  #including calender router to app
 app.include_router(chat.router)  #including chat router to app
 app.include_router(jobs.router)
 app.include_router(groceries.router)
+app.include_router(doctor.router)
 
 print("ROUTES:", [r.path for r in app.routes])
