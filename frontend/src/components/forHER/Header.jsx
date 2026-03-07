@@ -1,12 +1,12 @@
 import { C } from "./theme";
 
-export default function Header({ activeTab, setActiveTab }) {
+export default function Header({ activeTab, setActiveTab, savedJobsCount = 0, cartItemsCount = 0 }) {
   const tabs = [
     { id: "dashboard", label: "Home" },
     { id: "jobs", label: "Jobs" },
     { id: "groceries", label: "Groceries" },
     { id: "doctor", label: "Doctor" },
-    { id: "chat", label: "Mom Chat" },
+    { id: "chat", label: "MOMgram" },
     { id: "midwife", label: "Midwife" },
     { id: "calendar", label: "Calendar" },
   ];
@@ -63,6 +63,29 @@ export default function Header({ activeTab, setActiveTab }) {
             </button>
           ))}
         </nav>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("profile")}
+          className={`nav-tab ${activeTab === "profile" ? "active" : ""}`}
+          style={{ marginLeft: 10, display: "flex", alignItems: "center", gap: 6 }}
+          title="Open profile"
+          aria-label="Open profile"
+        >
+          Profile
+          <span
+            style={{
+              background: `${C.peach}88`,
+              borderRadius: 999,
+              padding: "2px 8px",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              color: C.textDark,
+            }}
+          >
+            {savedJobsCount + cartItemsCount}
+          </span>
+        </button>
       </div>
     </header>
   );

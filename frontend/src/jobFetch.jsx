@@ -45,7 +45,7 @@ export function ErrorBanner({ message, onRetry }) {
         <p style={{ fontWeight: 700, color: "#5a4a6a", marginBottom: 4 }}>Could not load data</p>
         <p style={{ fontSize: "0.85rem", color: "#8a7a9a" }}>{message}</p>
         <p style={{ fontSize: "0.8rem", color: "#8a7a9a", marginTop: 4 }}>
-          Make sure your backend is running on <code>localhost:8000</code> and your Apify token is set.
+          Make sure your backend is running on <code>localhost:8000</code> and your Olostep API key is set.
         </p>
       </div>
       {onRetry && (

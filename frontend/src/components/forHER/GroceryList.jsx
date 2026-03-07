@@ -3,9 +3,7 @@ import { useGroceries } from "../../jobFetch.js";
 import { ErrorBanner, LoadingSpinner } from "../../jobFetch.jsx";
 import { C } from "./theme";
 
-function GroceryCard({ item }) {
-  const [inCart, setInCart] = useState(false);
-
+function GroceryCard({ item, inCart, onToggleCart }) {
   return (
     <div className="card grocery-card" style={{ opacity: inCart ? 0.65 : 1, transition: "opacity 0.25s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -45,7 +43,7 @@ function GroceryCard({ item }) {
         <button
           className={inCart ? "btn-ghost" : "btn-primary"}
           style={{ fontSize: "0.76rem", padding: "6px 14px" }}
-          onClick={() => setInCart((s) => !s)}
+          onClick={() => onToggleCart(item)}
         >
           {inCart ? "Added" : "Add"}
         </button>
@@ -54,7 +52,7 @@ function GroceryCard({ item }) {
   );
 }
 
-export default function GroceryList() {
+export default function GroceryList({ onToggleCartItem = () => {}, isInCart = () => false }) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [keywordInput, setKeywordInput] = useState("");
@@ -117,7 +115,7 @@ export default function GroceryList() {
             style={{ width: 90, padding: "8px 10px", borderRadius: 12, border: `2px solid ${C.mint}66`, outline: "none" }}
           />
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Scraping..." : "Scrape Groceries"}
+            {loading ? "Finding items..." : "Find Items"}
           </button>
           {hasRequested && (
             <button className="btn-ghost" type="button" onClick={refetch} disabled={loading}>
@@ -128,7 +126,7 @@ export default function GroceryList() {
       </form>
 
       {error && <ErrorBanner message={error} onRetry={refetch} />}
-      {loading && <LoadingSpinner message="Scraping groceries from Apify..." />}
+      {loading && <LoadingSpinner message="Finding items..." />}
 
       {hasRequested && !loading && !error && (
         <p style={{ color: C.textMid, fontSize: "0.82rem", marginBottom: 10 }}>
@@ -173,7 +171,7 @@ export default function GroceryList() {
         )}
 
         {filtered.map((item) => (
-          <GroceryCard key={item.id} item={item} />
+          <GroceryCard key={item.id} item={item} inCart={isInCart(item)} onToggleCart={onToggleCartItem} />
         ))}
       </div>
     </div>
