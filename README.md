@@ -253,7 +253,7 @@ MamaCare gives expecting and new mothers a single platform to manage the chaos o
 | Deployment | Dockerfile, Railway + Vercel setup steps, CORS debugging | Debugged Railway builder settings, resolved invalid AWS credentials error | Confirmed `/health` returns 200 on live Railway URL |
 
 ### Impact
-Using Claude for code generation let us ship a full-stack web + mobile app with real-time features in 48 hours — a scope that would normally take 2–3 weeks. All AI output was reviewed line by line, tested against live endpoints, and modified to fit our existing codebase and theme system.
+Using Claude for code generation let us ship a full-stack web + mobile app with real-time features in 48 hours — a scope that would normally take 2–3 weeks. All AI output was reviewed line by line, tested against live endpoints, and modified to fit our existing codebase and theme system. We used Goose as our AI Co-Pilot to help build MamaCare. Instead of just asking for code snippets, we provided it with a special instruction file, .goosehints, that let it act like any other team member who knew our entire folder structure. Goose actually opened our terminal to install libraries, fixed a broken "Mother Chat" feature by reviewing its own error logs, and connected our Olostep scraper to our database. Most importantly, when Goose initially tried to create an "AI Doctor" that offered medical advice, we collaborated to pivot it into a safe "AI Advisor" that refers moms to real doctors in emergencies. It helped us manage a website and a mobile app at once.
 
 ---
 
