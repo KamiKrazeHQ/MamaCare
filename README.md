@@ -1,4 +1,4 @@
-# forHER 🌸
+# MamaCare 🌸
 
 > A full-stack web and mobile platform built to support mothers at every stage of their pregnancy journey.
 
@@ -8,11 +8,49 @@
 
 ---
 
+## 🌍 Our Mission
+
+**4-Line Problem Frame**
+
+| | |
+|---|---|
+| **User** | Expecting and new mothers, especially those without strong support networks or easy access to prenatal resources |
+| **Problem** | Pregnancy information, community, jobs, and healthcare are scattered across dozens of apps and websites — creating overwhelm at the worst possible time |
+| **Constraints** | Mothers need something fast, mobile-friendly, and free — they don't have time to learn new tools or pay for subscriptions while managing a pregnancy |
+| **Success Test** | A mother can book a prenatal appointment, find a flexible job, and message another mom in the same trimester — all in under 5 minutes, from her phone |
+
+**3-Line Pitch**
+
+> **Every mother deserves support in one place.**
+> MamaCare connects expecting mothers to community, prenatal care, and flexible work — all from one free app.
+> **Join.**
+
+*Aligned with UN SDG 3: Good Health and Well-Being — targeted specifically for women and maternal health.*
+
+---
+
+## 🌍 Our Mission
+
+### 4-Line Problem Frame
+- **User:** Expecting and new mothers, especially those without strong support networks or easy access to prenatal resources
+- **Problem:** Pregnancy information, community, jobs, and healthcare are scattered across dozens of apps and websites — creating overwhelm at the worst possible time
+- **Constraints:** Mothers need something fast, mobile-friendly, and free — they don't have time to learn new tools or pay for subscriptions while managing a pregnancy
+- **Success Test:** A mother can book a prenatal appointment, find a flexible job, and message another mom in the same trimester — all in under 5 minutes, from her phone
+
+### 3-Line Pitch
+- **Headline:** Every mother deserves support in one place
+- **Subhead:** MamaCare connects expecting mothers to community, prenatal care, and flexible work — all from one free app
+- **CTA:** Join
+
+> 🌱 *Aligned with UN Sustainable Development Goal #3 — Good Health and Wellbeing, with a focus on maternal health equity*
+
+---
+
 ## ⚡ Quickstart
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/KamiKrazeHQ/forHer.git
+git clone https://github.com/KamiKrazeHQ/MamaCare.git
 cd forHer
 
 # 2. Set up the backend
@@ -58,7 +96,7 @@ VITE_API_URL=http://localhost:8000
 
 ### What It Does
 
-forHER gives expecting and new mothers a single platform to manage the chaos of pregnancy:
+MamaCare gives expecting and new mothers a single platform to manage the chaos of pregnancy:
 
 | Feature | Description |
 |---|---|
@@ -139,49 +177,64 @@ forHER gives expecting and new mothers a single platform to manage the chaos of 
 
 ## 🛠 Decision Log
 
-- **FastAPI over Express** — Python's boto3 SDK gives native AWS access from one backend; tradeoff is higher cold start latency than Node.js
-- **DynamoDB over SQL** — No database server to manage, free on AWS free tier, scales automatically; tradeoff is no relational joins across tables
-- **WebSockets over polling** — Zero-latency real-time chat without page refresh; tradeoff is connections reset on server restart, mitigated by auto-reconnect
-- **Monorepo over multiple repos** — Single PR workflow and one place for judges to review all layers; tradeoff is merge conflicts span backend, web, and mobile simultaneously
-- **Railway over AWS App Runner** — App Runner required a paid tier we didn't have; Railway deployed our Dockerfile in under 3 minutes; tradeoff is backend lives outside AWS
-- **Expo over Flutter** — Reused existing React/JSX knowledge, no new language required under time pressure; tradeoff is Expo Go SDK version conflicts cost ~45 minutes of setup
-- **Olostep API over custom scraper** — Returns structured JSON from natural language queries in one API call; tradeoff is 5–15 second response latency and rate limits on free tier
-- **Vercel over S3 + CloudFront** — Zero-config React deployment with instant preview URLs; tradeoff is not fully AWS-native, loses points on all-AWS stack judging criteria
-- **One backend for web + mobile** — No duplicated logic; both platforms hit the same Railway API; tradeoff is a backend change breaks both simultaneously
-- **Direct commits to `test` during crunch** — Eliminated PR review overhead in final sprint; tradeoff is messy git history and multiple forced merges
+| Category | Decision → Why | Tradeoff |
+|---|---|---|
+| **Tech Stack** | FastAPI for backend → boto3 integration made AWS DynamoDB and AI (Goose, Olostep) connections seamless through modular routers | Higher cold start latency than Node.js; Python and React are different languages for the team |
+| **Tech Stack** | React + Vite over Next.js → Instant browser refresh on every save; no SSR needed for an authenticated app | No built-in SEO — fine for a logged-in app, matters if we add public pages |
+| **Tech Stack** | Expo (React Native) for mobile → Reused existing React knowledge; no Mac or new language required | Expo Go SDK was one version behind Node.js, costing ~45 minutes to downgrade and resolve |
+| **Architecture** | One GitHub repo for backend, web, and mobile → Single PR workflow; judges can see how everything connects in one place | Backend and mobile features on the same branch caused repeated merge conflicts and temporarily crashed deployment |
+| **Architecture** | Railway + Vercel over full AWS → App Runner required a paid tier; Railway deployed our Dockerfile in under 3 minutes; Vercel handles React with zero config | Backend lives outside AWS — harder to track all hosting locations and their different configurations |
+| **Architecture** | AWS DynamoDB over SQL → No server to manage, free on AWS free tier, key-value structure fits appointments and messages naturally | Required two separate tables with no way to relate them — no relational joins between appointments and chat data |
+| **AI Integration** | Olostep API over custom scraper or Apify → Structured JSON from a natural language query in one API call, no scraper infrastructure needed | 5–15 second response time, rate-limited on free tier — noticeable delay during demo |
+| **Feature Scope** | Mobile as a companion app (6 screens) using the same live backend → Zero backend changes; validated API works across web and mobile simultaneously | Saved jobs and cart items are local to the device — no sync with the web app |
+| **Third-Party** | AWS DynamoDB over Firebase or Supabase → Already in our AWS ecosystem; no extra account or SDK; free tier covers hackathon load | Required defining partition and sort keys upfront before writing a single query — more planning than Firebase's flexible document store |
+| **Process** | Teammates worked independently on separate features → Minimal GitHub conflicts while building; cleaner individual code | Integrating into shared files (`main.py`, `App.js`) took adjustment time as we reconciled two independent codebases into one |
 
 ---
 
 ## ⚠️ Risk Log
 
-| Issue | Impact | How We Caught It | Fix Applied |
-|---|---|---|---|
-| AWS credentials committed to GitHub in an early push | High — GitHub's secret scanner blocked the push and flagged exposed keys | GitHub push protection triggered immediately | Deactivated and deleted the exposed IAM keys, removed `.env` from git tracking using `git filter-branch`, added `.env` to `.gitignore` |
-| CORS policy blocking frontend from accessing backend after deployment | High — all API calls failed in production | Browser console showed `Access-Control-Allow-Origin` errors after deploying to Vercel | Updated `allow_origins` in FastAPI CORS middleware to include the live Vercel domain |
-| `clean_food()` bug — `parsed_rating` defined outside the function in `app.py` | Medium — would cause a `NameError` crash on any `/api/foods` request | Code review during router migration from `app.py` to `groceries.py` | Moved the `try/except` rating parse block inside the function before the return statement |
-| Expo Go SDK version mismatch with Node.js v24 | Medium — mobile app wouldn't load on physical device | Expo CLI error message on `npx expo start` | Downgraded Expo SDK to version 54 to match the stable Expo Go build on the App Store |
-| WebSocket disconnects when non-JSON text sent to chat | Low — crashes the connection for the affected user | Manual testing with wscat in two terminals | Added `try/except json.JSONDecodeError` around message parsing with a `continue` to keep the connection alive |
+| Area | Issue Description | Severity | Fix Applied | Evidence / Link | Status |
+|---|---|---|---|---|---|
+| Ethics | We started with an AI Doctor but realized it is unethical to let a non-human, non-professional give medical advice to pregnant mothers | 🔴 Critical | Redesigned as an AI Advisor that does not diagnose, clearly states its limitations, asks if it is an emergency before proceeding, and directs emergencies to call 911 | `backend/doctor.py` | ✅ Fixed |
+| Security | Olostep API key was being printed in the terminal on backend errors, and was also hardcoded in a frontend file — blocked from pushing to GitHub | 🔴 Critical | Moved all API keys into `.env` and added `.env` to `.gitignore` to prevent leaking credentials | `backend/.gitignore` | ✅ Fixed |
+| Security | AWS credentials were committed to GitHub in an early push and flagged by GitHub's secret scanner | 🔴 Critical | Deactivated and deleted the exposed IAM keys, removed `.env` from git history using `git filter-branch` | GitHub push protection alert | ✅ Fixed |
+| Code Writing | When using Goose in VS Code terminal to build the AI Advisor, Goose confirmed file changes were made but no changes were visible in the editor | 🟠 Major | Updated `.goosehints` to explicitly define Goose's boundaries — instructing it to update the currently open folder rather than creating new files elsewhere | `.goosehints` | ✅ Fixed |
+| Accessibility | Emojis throughout the UI rendered as question marks on some systems — the favorite heart on the Jobs board was also broken | 🟡 Minor | Researched emoji compatibility with VSCode and our frontend renderer; replaced unsupported emojis with ones confirmed to render correctly | Frontend components | ✅ Fixed |
 
 ---
 
 ## 📚 Evidence Log
 
-| Item | Purpose | Source | Type | License |
+### Sources & Libraries
+
+| Item / Claim | Purpose in Project | Source Link | Type | License / Attribution | Notes |
+|---|---|---|---|---|---|
+| React 18 | Frontend framework | https://react.dev | Code | MIT License | v18.2.0 |
+| Vite 5 | Web build tool and dev server | https://vitejs.dev | Code | MIT License | |
+| FastAPI | Python backend framework | https://fastapi.tiangolo.com | Code | MIT License | |
+| Uvicorn | ASGI server that runs FastAPI | https://www.uvicorn.org | Code | BSD License | |
+| boto3 (AWS SDK) | Python library to connect to DynamoDB | https://boto3.amazonaws.com | Code | Apache 2.0 | |
+| AWS DynamoDB | NoSQL database for appointments and chat | https://aws.amazon.com/dynamodb | Service | AWS Service | Free tier |
+| python-dotenv | Loads environment variables from .env files | https://pypi.org/project/python-dotenv | Code | BSD License | |
+| Pydantic | Data validation for FastAPI request schemas | https://docs.pydantic.dev | Code | MIT License | |
+| Mangum | Adapter to run FastAPI on AWS Lambda | https://pypi.org/project/mangum | Code | MIT License | |
+| Expo SDK 54 | Mobile app framework (React Native) | https://expo.dev | Code | MIT License | |
+| @react-navigation/native | Tab-based navigation for mobile app | https://reactnavigation.org | Code | MIT License | |
+| Olostep API | Web scraping for job listings and grocery data | https://olostep.com | Third-Party API | Commercial | API key required |
+| Railway | Backend hosting and auto-deployment | https://railway.app | Third-Party | Commercial | Free tier |
+| Vercel | Frontend hosting and auto-deployment | https://vercel.com | Third-Party | Commercial | Free tier |
+| ZocDoc (deep link) | Doctor booking reference in Doctor screen | https://zocdoc.com | Third-Party | Public URL | No data extracted |
+| websockets (PyPI) | Real-time bidirectional chat communication | https://pypi.org/project/websockets | Code | BSD License | |
+| @fullcalendar/react | Calendar UI component for appointment view | https://fullcalendar.io | Code | MIT License | Open source build |
+
+### AI-Generated Content Log
+
+| AI Tool Used | Purpose | What AI Generated | What We Changed | Verification Method |
 |---|---|---|---|---|
-| React 18 | Web frontend framework | https://react.dev | Code | MIT |
-| Vite 5 | Build tool and dev server | https://vitejs.dev | Code | MIT |
-| FastAPI | Python backend framework | https://fastapi.tiangolo.com | Code | MIT |
-| boto3 | AWS SDK for DynamoDB | https://boto3.amazonaws.com | Code | Apache 2.0 |
-| AWS DynamoDB | Cloud NoSQL database | https://aws.amazon.com/dynamodb | Service | AWS Terms |
-| python-dotenv | Environment variable loader | https://pypi.org/project/python-dotenv | Code | BSD |
-| Pydantic | Request schema validation | https://docs.pydantic.dev | Code | MIT |
-| Expo SDK 54 | React Native mobile framework | https://expo.dev | Code | MIT |
-| @react-navigation/native | Mobile tab navigation | https://reactnavigation.org | Code | MIT |
-| Olostep API | Job and grocery web scraping | https://olostep.com | API | Commercial |
-| Railway | Backend hosting | https://railway.app | Service | Commercial (free tier) |
-| Vercel | Frontend hosting | https://vercel.com | Service | Commercial (free tier) |
-| ZocDoc | Doctor booking deep link | https://zocdoc.com | Third-Party | Public URL |
-| websockets (PyPI) | WebSocket support | https://pypi.org/project/websockets | Code | BSD |
+| Claude (Anthropic) via Goose | Backend architecture + FastAPI setup for `jobs.py` and `groceries.py` | Boilerplate route structure, Pydantic schemas, and DynamoDB query patterns | Added doctor router, fixed `clean_food()` bug where `parsed_rating` was defined outside the function, updated CORS origins, added custom comments throughout | Ran every route in FastAPI's `/docs` explorer; tested POST/GET/PUT/DELETE for appointments; tested WebSocket chat with wscat in two terminals |
+| Claude (Anthropic) via Goose | Frontend React components | `Calendar.jsx`, `ChatRoom.jsx`, `useChat.js`, `api/calendar.js` scaffolding | Integrated with existing MamaCare theme (`theme.js`), matched color palette, wired into existing `MamaCare-app.jsx` tab routing | Manually tested all calendar CRUD flows in browser; tested real-time chat with two browser tabs open simultaneously |
+| Claude (Anthropic) via Goose | Mobile app (Expo) | `App.js` navigation shell and all 6 screen file skeletons | Wrote out each screen fully using the skeleton provided by Claude as a starting structure | Scanned QR code with Expo Go on Android; verified each tab loads and connects to live Railway backend; confirmed chat sends and receives in real time |
 
 ---
 
@@ -195,7 +248,7 @@ forHER gives expecting and new mothers a single platform to manage the chaos of 
 | Task | What Was Generated | What We Changed | How We Verified |
 |---|---|---|---|
 | Backend scaffold | `main.py`, `calendar.py`, `chat.py`, `jobs.py`, `groceries.py` route structure and Pydantic schemas | Added doctor router, fixed `clean_food()` bug, updated CORS origins, added custom annotations | Tested all routes in FastAPI `/docs` interactive explorer |
-| Frontend components | `Calendar.jsx`, `ChatRoom.jsx`, `useChat.js`, `api/calendar.js` | Integrated with existing forHER theme, wired into existing tab routing in `forHER-app.jsx` | Manually tested calendar CRUD and live chat in browser with two tabs open |
+| Frontend components | `Calendar.jsx`, `ChatRoom.jsx`, `useChat.js`, `api/calendar.js` | Integrated with existing MamaCare theme, wired into existing tab routing in `MamaCare-app.jsx` | Manually tested calendar CRUD and live chat in browser with two tabs open |
 | Mobile app | `App.js` navigation, all 6 screen files, `api/client.js` | Fixed `HomeSreen.jsx` typo, confirmed all imports matched file names | Tested on physical Android device via Expo Go |
 | Deployment | Dockerfile, Railway + Vercel setup steps, CORS debugging | Debugged Railway builder settings, resolved invalid AWS credentials error | Confirmed `/health` returns 200 on live Railway URL |
 
@@ -213,7 +266,7 @@ Using Claude for code generation let us ship a full-stack web + mobile app with 
 - Doctor screen links to ZocDoc externally — no owned provider data yet
 
 ### Next Steps
-
+- **AI Doctor** — OpenAI-powered prenatal Q&A with safe, non-alarmist guidance
 - **Midwife Connect** — Verified directory with in-app booking for in-person and virtual consultations
 - **Drugstore** — Prenatal-safe product marketplace with real-time deal scraping
 - **Push Notifications** — Appointment reminders via Expo push notifications
@@ -236,7 +289,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ### Attributions
 - FastAPI — MIT License — Sebastián Ramírez
-- React — MIT License — Meta Platforms 
+- React — MIT License — Meta Platforms
 - Expo — MIT License — Expo Inc.
 - boto3 — Apache 2.0 — Amazon Web Services
 - React Navigation — MIT License — React Navigation Contributors
